@@ -1,0 +1,22 @@
+{
+    "modelo": "XGBoost",
+    "threshold": 0.5659,
+    "metricas": {
+        "auc_pr_train": 0.7064,
+        "auc_pr_test": 0.6144,
+        "gap": 0.0919,
+        "recall_test": 0.7964,
+        "precision_test": 0.5023,
+        "f1_test": 0.616
+    },
+    "mejores_params": {
+        "n_estimators": 347,
+        "max_depth": 3,
+        "learning_rate": 0.01507470810253126,
+        "subsample": 0.6239447633385801,
+        "colsample_bytree": 0.7987246562283645,
+        "reg_alpha": 0.025146806844078707,
+        "reg_lambda": 0.5247245636675313,
+        "min_child_weight": 11
+    }
+}
