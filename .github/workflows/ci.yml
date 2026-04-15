@@ -34,6 +34,7 @@ jobs:
           from sklearn.compose import ColumnTransformer
           from sklearn.preprocessing import StandardScaler, OneHotEncoder
           from sklearn.linear_model import LogisticRegression
+          import pandas as pd
 
           num_features = ['tenure', 'MonthlyCharges', 'TotalCharges']
           cat_features = ['gender', 'SeniorCitizen', 'Partner', 'Dependents',
@@ -52,8 +53,7 @@ jobs:
               ('classifier', LogisticRegression())
           ])
 
-          import pandas as pd
-          X = pd.DataFrame([{
+          row = {
               'gender': 'Male', 'SeniorCitizen': 0, 'Partner': 'Yes',
               'Dependents': 'No', 'tenure': 12, 'PhoneService': 'Yes',
               'MultipleLines': 'No', 'InternetService': 'Fiber optic',
@@ -63,8 +63,9 @@ jobs:
               'Contract': 'Month-to-month', 'PaperlessBilling': 'Yes',
               'PaymentMethod': 'Electronic check',
               'MonthlyCharges': 70.35, 'TotalCharges': 844.20
-          }])
-          y = [1]
+          }
+          X = pd.DataFrame([row, row])
+          y = [0, 1]
           pipeline.fit(X, y)
 
           Path('src/models').mkdir(parents=True, exist_ok=True)
