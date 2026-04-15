@@ -1,0 +1,97 @@
+name: CI — ChurnPredictor
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install fastapi uvicorn pydantic pandas numpy scikit-learn==1.5.0 xgboost lightgbm shap joblib pyarrow pytest httpx
+
+      - name: Create mock model for tests
+        run: |
+          python - <<'EOF'
+          import joblib
+          import json
+          import numpy as np
+          from pathlib import Path
+          from sklearn.pipeline import Pipeline
+          from sklearn.compose import ColumnTransformer
+          from sklearn.preprocessing import StandardScaler, OneHotEncoder
+          from sklearn.linear_model import LogisticRegression
+
+          num_features = ['tenure', 'MonthlyCharges', 'TotalCharges']
+          cat_features = ['gender', 'SeniorCitizen', 'Partner', 'Dependents',
+                          'PhoneService', 'MultipleLines', 'InternetService',
+                          'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+                          'TechSupport', 'StreamingTV', 'StreamingMovies',
+                          'Contract', 'PaperlessBilling', 'PaymentMethod']
+
+          preprocessor = ColumnTransformer([
+              ('num', StandardScaler(), num_features),
+              ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), cat_features)
+          ])
+
+          pipeline = Pipeline([
+              ('preprocessor', preprocessor),
+              ('classifier', LogisticRegression())
+          ])
+
+          import pandas as pd
+          X = pd.DataFrame([{
+              'gender': 'Male', 'SeniorCitizen': 0, 'Partner': 'Yes',
+              'Dependents': 'No', 'tenure': 12, 'PhoneService': 'Yes',
+              'MultipleLines': 'No', 'InternetService': 'Fiber optic',
+              'OnlineSecurity': 'No', 'OnlineBackup': 'Yes',
+              'DeviceProtection': 'No', 'TechSupport': 'No',
+              'StreamingTV': 'No', 'StreamingMovies': 'No',
+              'Contract': 'Month-to-month', 'PaperlessBilling': 'Yes',
+              'PaymentMethod': 'Electronic check',
+              'MonthlyCharges': 70.35, 'TotalCharges': 844.20
+          }])
+          y = [1]
+          pipeline.fit(X, y)
+
+          Path('src/models').mkdir(parents=True, exist_ok=True)
+          joblib.dump(pipeline, 'src/models/xgb_pipeline.joblib')
+
+          config = {
+              "modelo": "XGBoost",
+              "threshold": 0.5659,
+              "metricas": {},
+              "mejores_params": {}
+          }
+          with open('src/models/resultados_finales.json', 'w') as f:
+              json.dump(config, f)
+          EOF
+
+      - name: Run tests
+        run: |
+          pytest tests/test_api.py -v
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t churnpredictor-api .
